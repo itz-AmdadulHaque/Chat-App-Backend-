@@ -2,22 +2,23 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { corsOptions } from "./config/corsOptions.js";
-import userRoute from "./routes/user.route.js";
-
-import { chats } from "./data/data.js";
+import userRoutes from "./routes/user.route.js";
+import chatRoutes from "./routes/chat.route.js"
 import connectDB from "./config/db.js";
-
+import cookieParser from "cookie-parser"
 const app = express();
 
 // middleware
 app.use(cors(corsOptions));
+app.use(cookieParser())
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static("public"));
 
 // routes
-app.use("/api/v1/users", userRoute);
+app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/chat", chatRoutes)
 
 //page not found
 app.use("*", (req, res) => {

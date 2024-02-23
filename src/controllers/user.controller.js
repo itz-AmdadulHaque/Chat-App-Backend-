@@ -186,4 +186,69 @@ const userLogout = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "User logged Out"));
 });
 
-export { userRegister, userLogin, userLogout };
+//search all user
+const allUser = asyncHandler(async (req, res) => {
+  const keyword = req.query.search
+    ? {
+        $or: [
+          { name: { $regex: req.query.search, $options: "i" } }, // regex for search patern
+          { email: { $regex: req.query.search, $options: "i" } }, // "i" for case insensitive
+        ],
+      }
+    : {};
+
+  const searchUsers = await User.find(keyword)
+    .find({
+      _id: { $ne: req.user._id },
+    })
+    .select("_id name email pic"); // selec specific field
+
+  res.json(new ApiResponse(200, searchUsers, "All users list"));
+});
+
+// refresh token rotation and access token generator
+const refreshTokenRotation = asyncHandler(async (req, res) => {
+  const oldRefreshToken = req.cookies?.refreshToken;
+
+  if (!oldRefreshToken) {
+    throw new ApiError(401, "No Refresh Token");
+  }
+
+  const options = {
+    httpOnly: true, // this make cookie only accessble from backend
+    secure: true,
+  };
+  res.clearCookie("refreshToken", options);
+
+  const decodedUser = jwt.verify(
+    oldRefreshToken,
+    process.env.REFRESH_TOKEN_SECRET
+  );
+
+  if (!decodedUser) {
+    throw new ApiError(403, "Access forbidden, Attempt to hack");
+  }
+
+  const user = await User.findById(decodedUser._id);
+  if (oldRefreshToken !== user?.refreshToken) {
+    throw new ApiError(403, "Attempt to hack or old refresh token");
+  }
+
+  // save refresh token to db and return access and refresh token
+  const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(
+    user._id
+  );
+
+  // console.log("/////Old \n",oldRefreshToken, "\n /////new \n", refreshToken);
+  return res.status(200).cookie("refreshToken", refreshToken, options).json(
+    new ApiResponse(
+      200,
+      {
+        accessToken,
+      },
+      "Access token created from refresh token"
+    )
+  );
+});
+
+export { userRegister, userLogin, userLogout, allUser, refreshTokenRotation };
