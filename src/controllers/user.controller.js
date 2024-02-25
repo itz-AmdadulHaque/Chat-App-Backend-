@@ -92,8 +92,9 @@ const userRegister = asyncHandler(async (req, res) => {
 
   // option for cookie, cookie() method from express set the cookie
   const options = {
-    httpOnly: true,
+    httpOnly: true, // this make cookie only accessble from backend
     secure: true,
+    maxAge: 24 * 60 * 60 * 1000, // only in milisecond format
   };
 
   return res
@@ -143,8 +144,9 @@ const userLogin = asyncHandler(async (req, res) => {
 
   // option for cookie, cookie() method from express set the cookie
   const options = {
-    httpOnly: true,
+    httpOnly: true, // this make cookie only accessble from backend
     secure: true,
+    maxAge: 24 * 60 * 60 * 1000, // only in milisecond format
   };
 
   return res
@@ -186,7 +188,7 @@ const userLogout = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "User logged Out"));
 });
 
-//search all user
+//search from all user
 const allUser = asyncHandler(async (req, res) => {
   const keyword = req.query.search
     ? {
@@ -203,7 +205,20 @@ const allUser = asyncHandler(async (req, res) => {
     })
     .select("_id name email pic"); // selec specific field
 
-  res.json(new ApiResponse(200, searchUsers, "All users list"));
+  res.json(new ApiResponse(200, searchUsers, "Search from All users list"));
+});
+
+// loged in user info
+const getUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req?.user?._id).select(
+    "-password -refreshToken"
+  ); // req.user, set by auth middleware
+
+  if (!user) {
+    throw new ApiError(501, "User not found");
+  }
+
+  res.status(201).json(new ApiResponse(201, user, "Loged in user Info"));
 });
 
 // refresh token rotation and access token generator
@@ -214,30 +229,55 @@ const refreshTokenRotation = asyncHandler(async (req, res) => {
     throw new ApiError(401, "No Refresh Token");
   }
 
-  const options = {
-    httpOnly: true, // this make cookie only accessble from backend
-    secure: true,
-  };
-  res.clearCookie("refreshToken", options);
+  res.clearCookie("refreshToken", { httpOnly: true, secure: true });
 
+  //verify the token
   const decodedUser = jwt.verify(
     oldRefreshToken,
-    process.env.REFRESH_TOKEN_SECRET
+    process.env.REFRESH_TOKEN_SECRET,
+    (err, userDecoded) => {
+      if (err) {
+        // console.log("auth error//////////\n", err?.message);
+        if (err?.message === "jwt expired") {
+          throw new ApiError(403, "Expired RefreshToken token");
+        }
+        throw new ApiError(403, "Forbidden - Invalid token");
+      } else {
+        return userDecoded;
+      }
+    }
   );
 
-  if (!decodedUser) {
-    throw new ApiError(403, "Access forbidden, Attempt to hack");
-  }
+  // const decodedUser = jwt.verify(
+  //   oldRefreshToken,
+  //   process.env.REFRESH_TOKEN_SECRET
+  // );
+
+  // if (!decodedUser) {
+  //   throw new ApiError(403, "Access forbidden, Attempt to hack");
+  // }
 
   const user = await User.findById(decodedUser._id);
+  // console.log(user)
+  if (!user) {
+    throw new ApiError(401, "User does not exist");
+  }
+  console.log(oldRefreshToken !== user?.refreshToken);
+
   if (oldRefreshToken !== user?.refreshToken) {
-    throw new ApiError(403, "Attempt to hack or old refresh token");
+    throw new ApiError(403, "Attempt to hack using old refresh token");
   }
 
   // save refresh token to db and return access and refresh token
   const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(
     user._id
   );
+
+  const options = {
+    httpOnly: true, // this make cookie only accessble from backend
+    secure: true,
+    maxAge: 24 * 60 * 60 * 1000, // only in milisecond format
+  };
 
   // console.log("/////Old \n",oldRefreshToken, "\n /////new \n", refreshToken);
   return res.status(200).cookie("refreshToken", refreshToken, options).json(
@@ -251,4 +291,4 @@ const refreshTokenRotation = asyncHandler(async (req, res) => {
   );
 });
 
-export { userRegister, userLogin, userLogout, allUser, refreshTokenRotation };
+export { userRegister, userLogin, userLogout,getUser, allUser, refreshTokenRotation };

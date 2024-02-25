@@ -1,6 +1,6 @@
 import {Router} from "express"
 import {upload} from "../middleware/multer.middleware.js"
-import { allUser, refreshTokenRotation, userLogin, userLogout, userRegister } from "../controllers/user.controller.js"
+import { allUser, getUser, refreshTokenRotation, userLogin, userLogout, userRegister } from "../controllers/user.controller.js"
 import { verifyJwt } from "../middleware/auth.middleware.js"
 const router = Router()
 
@@ -11,7 +11,8 @@ router.route("/login").post(userLogin)
 router.route("/refresh").get(refreshTokenRotation)
 
 // protected route
-router.route("/").get(verifyJwt, allUser);
+router.route("/allUser").get(verifyJwt, allUser);
+router.route("/").get(verifyJwt, getUser);
 router.route("/logout").post(verifyJwt, userLogout)
 
 
