@@ -65,7 +65,7 @@ const fetchChat = asyncHandler(async (req, res) => {
 
 const createGroupChat = asyncHandler(async (req, res) => {
   if (!req.body.users || !req.body.name) {
-    return res.status(400).json(new ApiError(400, "Please fill all field"));
+    throw new ApiError(400, "Please fill all field");
   }
 
   //   console.log("Body: ", req.body)
@@ -73,11 +73,7 @@ const createGroupChat = asyncHandler(async (req, res) => {
   let users = req.body.users; //remember to JSON.perse if show error
 
   if (users.length < 2) {
-    return res
-      .status(400)
-      .json(
-        new ApiError(400, "More then two users are required to form a group")
-      );
+    throw new ApiError(400, "More then two users are required to form a group");
   }
 
   // adding the login user who created the group
@@ -152,7 +148,7 @@ const addToGroup = asyncHandler(async (req, res) => {
     .populate("groupAdmin", "-password -refreshToken");
 
   if (!updatedGroup) {
-    throw ApiError(404, " Failed to add user, Chat not found");
+    throw new ApiError(404, " Failed to add user, Chat not found");
   }
 
   res

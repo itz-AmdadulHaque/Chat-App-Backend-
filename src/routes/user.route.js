@@ -13,7 +13,7 @@ router.route("/refresh").get(refreshTokenRotation)
 // protected route
 router.route("/allUser").get(verifyJwt, allUser);
 router.route("/").get(verifyJwt, getUser);
-router.route("/logout").post(verifyJwt, userLogout)
+router.route("/logout").get(verifyJwt, userLogout)
 
 
 export default router
