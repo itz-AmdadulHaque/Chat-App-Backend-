@@ -161,6 +161,7 @@ const removeFromGroup = asyncHandler(async (req, res) => {
   if (!chatId || !userId) {
     throw new ApiError(400, "ChatId and UserId missing");
   }
+  
 
   // check if the requester is admin
   const chatGroup = await Chat.findById(chatId);
@@ -174,6 +175,11 @@ const removeFromGroup = asyncHandler(async (req, res) => {
 
   if ((chatGroup?.groupAdmin).toString() !== req?.user?._id) {
     throw new ApiError(409, "you are not admin");
+  }
+
+  // admin cannot be remove without deleting group
+  if ((chatGroup?.groupAdmin).toString()  === userId) {
+    throw new ApiError(400, "Admin can not be remove, delete the group");
   }
 
   const updatedGroup = await Chat.findByIdAndUpdate(
@@ -216,7 +222,7 @@ const deleteGroup = asyncHandler(async (req, res) => {
   // console.log((chat?.groupAdmin).toString(), req?.user?._id);
 
   if (chat?.isGroupChat && (chat?.groupAdmin).toString() !== req?.user?._id) {
-    throw new ApiError(409, "you are not admin");
+    throw new ApiError(409, "You are not a admin");
   }
 
   const del = await Chat.deleteOne({ _id: chatId });
