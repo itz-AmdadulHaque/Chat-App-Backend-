@@ -4,8 +4,11 @@ import cors from "cors";
 import { corsOptions } from "./config/corsOptions.js";
 import userRoutes from "./routes/user.route.js";
 import chatRoutes from "./routes/chat.route.js"
+import messageRoute from "./routes/message.route.js"
 import connectDB from "./config/db.js";
 import cookieParser from "cookie-parser"
+import {Server} from "socket.io"
+
 const app = express();
 
 // middleware
@@ -19,14 +22,15 @@ app.use(express.static("public"));
 // routes
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/chat", chatRoutes)
+app.use("/api/v1/messages", messageRoute)
 
 //page not found
 app.use("*", (req, res) => {
-  console.log("////Page not found")
-  res.status(404).send("Page Not Found");
+  console.log("////Invalid Route")
+  res.status(404).send("Invalid Route");
 });
 
-// catch all error
+// catch all error (including custom throw errors)
 app.use((error, req, res, next) => {
   console.log("///////////////Error: \n", error);  // thrown error or custom error all handled
   res.status(error.statusCode || 500).json({
@@ -48,10 +52,14 @@ connectDB()
     });
 
     // if everything ok then start server
-    app.listen(process.env.PORT, () => {
+     app.listen(process.env.PORT, () => {
       console.log(`⚙️ Server is running at port : ${process.env.PORT}`);
     });
+
+
   })
   .catch((err) => {
     console.log("MONGO db connection failed !!! ", err);
   });
+
+

@@ -6,6 +6,7 @@ import {
   createGroupChat,
   deleteGroup,
   fetchChat,
+  leaveGroup,
   removeFromGroup,
   renameGroup,
 } from "../controllers/chat.controller.js";
@@ -20,5 +21,7 @@ router.route("/renameGroup").put(verifyJwt, renameGroup);
 router.route("/addToGroup").put(verifyJwt, addToGroup);
 router.route("/removeFromGroup").put(verifyJwt, removeFromGroup);
 router.route('/deleteGroup').delete(verifyJwt, deleteGroup)
+router.route('/leaveGroup').delete(verifyJwt, leaveGroup)
+
 
 export default router;

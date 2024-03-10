@@ -3,6 +3,7 @@ import { Chat } from "../models/chat.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { Message } from "../models/message.model.js";
 
 const createChat = asyncHandler(async (req, res) => {
   const { userId } = req.body; // with whom you want to chat
@@ -161,7 +162,6 @@ const removeFromGroup = asyncHandler(async (req, res) => {
   if (!chatId || !userId) {
     throw new ApiError(400, "ChatId and UserId missing");
   }
-  
 
   // check if the requester is admin
   const chatGroup = await Chat.findById(chatId);
@@ -178,7 +178,7 @@ const removeFromGroup = asyncHandler(async (req, res) => {
   }
 
   // admin cannot be remove without deleting group
-  if ((chatGroup?.groupAdmin).toString()  === userId) {
+  if ((chatGroup?.groupAdmin).toString() === userId) {
     throw new ApiError(400, "Admin can not be remove, delete the group");
   }
 
@@ -225,13 +225,56 @@ const deleteGroup = asyncHandler(async (req, res) => {
     throw new ApiError(409, "You are not a admin");
   }
 
-  const del = await Chat.deleteOne({ _id: chatId });
+  // delete all message then delete group
+  const deletedMessages = await Message.deleteMany({ chat: chatId });
+  console.log("////delete message: ", deletedMessages);
 
-  if (!del) {
+  if (!deletedMessages?.acknowledged) {
+    throw new ApiError(500, "Failed to delete all group messages");
+  }
+
+  // deleting the group chat
+  const deleteGroup = await Chat.deleteOne({ _id: chatId });
+  console.log("////delete group: ", deleteGroup);
+
+  if (!deleteGroup?.acknowledged) {
     throw new ApiError(404, "Group deletion failed");
   }
 
   res.status(200).json(new ApiResponse(200, {}, "Group Deleted successfully"));
+});
+
+const leaveGroup = asyncHandler(async (req, res) => {
+  const {chatId} = req.body;
+
+  if(!chatId){
+    throw new ApiError(400, "Chat id missing")
+  }
+
+  const leaveGroup = await Chat.findByIdAndUpdate(
+    chatId,
+    {
+      $pull: { users: req?.user?._id },
+    },
+    {
+      new: true,
+    }
+  )
+    .populate("users", "-password -refreshToken")
+    .populate("groupAdmin", "-password -refreshToken");
+
+    if (!leaveGroup) {
+      throw new ApiError(404, "Failed to leave");
+    }
+    
+    console.log("Leaved group successfully")
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, leaveGroup, "Successfully leaved from group")
+      );
+
 });
 
 export {
@@ -242,4 +285,5 @@ export {
   addToGroup,
   removeFromGroup,
   deleteGroup,
+  leaveGroup
 };
