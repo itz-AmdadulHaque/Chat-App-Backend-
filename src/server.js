@@ -52,11 +52,47 @@ connectDB()
     });
 
     // if everything ok then start server
-     app.listen(process.env.PORT, () => {
+    const expressSever = app.listen(process.env.PORT, () => {
       console.log(`⚙️ Server is running at port : ${process.env.PORT}`);
     });
 
+    const io = new Server(expressSever, {
+      cors:{ origin: '*' }
+    });
 
+    io.on("connection", (socket) => {
+      console.log("//////////Connected to Socket io")
+
+      // user active
+      socket.on("setup", (userData)=>{
+        socket.join(userData._id)
+        // console.log(userData._id);
+        socket.emit("connected")
+      })
+
+      // join chat
+      socket.on("join chat", (room)=>{
+        socket.join(room)
+        console.log("User joined room: ", room)
+      })
+
+      // message
+      socket.on("new message", (newMessage)=>{
+        let chat = newMessage.chat
+
+        if(!chat.users){
+          console.log("chat users not defined")
+          return;
+        }
+
+        chat.users.forEach((user)=>{
+          if(user._id == newMessage.sender._id) return;
+
+          socket.in(user._id).emit("message recieved", newMessage)
+        })
+      })
+
+    });
   })
   .catch((err) => {
     console.log("MONGO db connection failed !!! ", err);
