@@ -3,17 +3,17 @@ import express from "express";
 import cors from "cors";
 import { corsOptions } from "./config/corsOptions.js";
 import userRoutes from "./routes/user.route.js";
-import chatRoutes from "./routes/chat.route.js"
-import messageRoute from "./routes/message.route.js"
+import chatRoutes from "./routes/chat.route.js";
+import messageRoute from "./routes/message.route.js";
 import connectDB from "./config/db.js";
-import cookieParser from "cookie-parser"
-import {Server} from "socket.io"
+import cookieParser from "cookie-parser";
+import { Server } from "socket.io";
 
 const app = express();
 
 // middleware
 app.use(cors(corsOptions));
-app.use(cookieParser())
+app.use(cookieParser());
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -21,23 +21,23 @@ app.use(express.static("public"));
 
 // routes
 app.use("/api/v1/users", userRoutes);
-app.use("/api/v1/chat", chatRoutes)
-app.use("/api/v1/messages", messageRoute)
+app.use("/api/v1/chat", chatRoutes);
+app.use("/api/v1/messages", messageRoute);
 
 //page not found
 app.use("*", (req, res) => {
-  console.log("////Invalid Route")
+  console.log("////Invalid Route");
   res.status(404).send("Invalid Route");
 });
 
 // catch all error (including custom throw errors)
 app.use((error, req, res, next) => {
-  console.log("///////////////Error: \n", error);  // thrown error or custom error all handled
+  console.log("///////////////Error: \n", error); // thrown error or custom error all handled
   res.status(error.statusCode || 500).json({
     success: false,
     message: error.message || "Something went wrong",
   });
-  next()
+  next();
 });
 
 const PORT = process.env.PORT || 3000;
@@ -57,45 +57,60 @@ connectDB()
     });
 
     const io = new Server(expressSever, {
-      cors:{ origin: '*' }
+      cors: { origin: "*" },
     });
 
     io.on("connection", (socket) => {
-      console.log("//////////Connected to Socket io")
+      console.log("//////////Connected to Socket io");
 
       // user active
-      socket.on("setup", (userData)=>{
-        socket.join(userData._id)
-        // console.log(userData._id);
-        socket.emit("connected")
-      })
+      socket.on("setup", (userData) => {
+        socket.join(userData._id);
+        console.log("User join",userData._id);
+        socket.emit("connected");
+      });
 
       // join chat
-      socket.on("join chat", (room)=>{
-        socket.join(room)
-        console.log("User joined room: ", room)
-      })
+      socket.on("join chat", (room) => {
+        socket.join(room);
+        console.log("joined room: ", room);
+      });
+
+      // leave chat
+      socket.on("leave chat", (room) => {
+        socket.leave(room);
+        console.log("/////leaved room: ", room);
+      });
 
       // message
-      socket.on("new message", (newMessage)=>{
-        let chat = newMessage.chat
+      socket.on("new message", (newMessage) => {
+        
+        let chat = newMessage.chat;
+        // console.log("///message from chat: ", chat)
 
-        if(!chat.users){
-          console.log("chat users not defined")
+        if (!chat.users) {
+          console.log("chat users not defined");
           return;
         }
+        console.log("////Sending message to:")
+        chat.users.forEach((user) => {
+          if (user._id === newMessage.sender._id) return;
+          console.log("sender id: ", user._id)
 
-        chat.users.forEach((user)=>{
-          if(user._id == newMessage.sender._id) return;
+          socket.in(user._id).emit("message_recieved", newMessage);
+        });
+      });
 
-          socket.in(user._id).emit("message recieved", newMessage)
-        })
-      })
+      // for typing indicator
+      socket.on("typing", (room) => {
+        socket.in(room).emit("typing");
+      });
 
+      socket.on("stop typing", (room) => {
+        socket.in(room).emit("stop typing");
+      });
     });
   })
   .catch((err) => {
     console.log("MONGO db connection failed !!! ", err);
   });
-
-
