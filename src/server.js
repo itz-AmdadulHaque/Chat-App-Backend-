@@ -57,7 +57,7 @@ connectDB()
     });
 
     const io = new Server(expressSever, {
-      cors: { origin: "*" },
+      cors: corsOptions,
     });
 
     io.on("connection", (socket) => {
