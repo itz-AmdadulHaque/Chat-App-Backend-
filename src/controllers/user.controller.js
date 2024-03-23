@@ -68,7 +68,11 @@ const userRegister = asyncHandler(async (req, res) => {
   }
 
   const profileImage = await uploadOnCloudinary(profileImageLacalPath);
-
+  // if an image given and  upload failed
+  if(profileImage?.name === 'Error' ){
+    console.log("///Cloudinary error: \n",profileImage)
+    throw new ApiError(profileImage?.http_code, profileImage?.message)
+  }
   //create and save to database
   const user = await User.create({
     name,
@@ -76,6 +80,10 @@ const userRegister = asyncHandler(async (req, res) => {
     password, // password will be hashed befoe saving
     pic: profileImage?.url,
   });
+
+  if(!user){
+    throw new ApiError(500, "Failed to create user account")
+  }
 
   // save refresh token to db and return access and refresh token
   const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(

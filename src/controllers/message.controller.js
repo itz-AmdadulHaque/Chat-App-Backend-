@@ -43,8 +43,8 @@ const sendMessage = asyncHandler(async (req, res) => {
   }
 
   // Find the created message and populate
-  const populatedMessage = await Message.findById(newMessage._id).populate([
-    { path: "sender", select: "name pic" }, // Populate sender with selected fields
+  let populatedMessage = await Message.findById(newMessage._id).populate([
+    { path: "sender", select: "name pic email" }, // Populate sender with selected fields
     {
       path: "chat",
       populate: {
@@ -57,12 +57,14 @@ const sendMessage = asyncHandler(async (req, res) => {
   if (!populatedMessage) {
     throw new ApiError(500, "failed to populate the created message");
   }
-  // Update the Chat document with the populated message
-  const letestMessage = await Chat.findByIdAndUpdate(req.body.chatId, {
+  // add latest message to the chat
+  const updatedChat = await Chat.findByIdAndUpdate(req.body.chatId, {
     latestMessage: populatedMessage,
-  });
+  })
 
-  if (!letestMessage) {
+  // add letest message to chat
+
+  if (!updatedChat) {
     throw new ApiError(400, "failed to update latest message");
   }
 
