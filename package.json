@@ -5,7 +5,8 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "dev": "supervisor src/server.js"
+    "dev": "supervisor src/server.js",
+    "start": "node src/server.js"
   },
   "author": "Amdadul haque",
   "license": "ISC",
