@@ -3,7 +3,7 @@
 - [Frontend (React + Vite)] (https://github.com/itz-AmdadulHaque/Chat-App-frontend-)
 - Backend (Nodejs)
 
-A simple chat app.
+A simple chat app backend (api) build using ExpressJs. Used MongoDB database to store data and used cloudinary to store image. 'multer' npm package use to handle form data containing images.
 
 ## Env variable
 
